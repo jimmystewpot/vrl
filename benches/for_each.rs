@@ -42,7 +42,7 @@ fn bench_for_each(c: &mut Criterion) {
         });
 
         // Wildcard array benchmark
-        let wildcard_program = "sum = 0\nfor_each(.) -> |_index, _val| { sum = sum + 1 }";
+        let wildcard_program = "sum = 0\nfor_each(.) -> |_, _| { sum = sum + 1 }";
         let res_wildcard = compile_with_state(
             wildcard_program,
             &fns,
