@@ -54,8 +54,10 @@ impl<'a> Builder<'a> {
         &self.list
     }
 
-    pub(crate) fn is_iterator(&self) -> bool {
-        self.function.closure().is_some_and(|def| def.is_iterator)
+    pub(crate) fn supports_break(&self) -> bool {
+        self.function
+            .closure()
+            .is_some_and(|def| def.supports_break)
     }
 
     #[allow(clippy::too_many_lines)]

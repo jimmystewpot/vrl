@@ -28,6 +28,11 @@ pub struct Definition {
     /// collection elements to determine the eventual type definition of the
     /// closure variable(s) (see `Variable`).
     pub is_iterator: bool,
+
+    /// Defines whether the closure consumes `break` statements.
+    ///
+    /// If `true`, `break` is permitted inside the closure body.
+    pub supports_break: bool,
 }
 
 /// One input variant for a function-closure.

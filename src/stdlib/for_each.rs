@@ -156,6 +156,7 @@ impl Function for ForEach {
                 },
             }],
             is_iterator: true,
+            supports_break: true,
         })
     }
 }

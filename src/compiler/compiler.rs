@@ -804,12 +804,12 @@ impl<'a> Compiler<'a> {
                     None => None,
                     Some(block) => {
                         let span = block.span();
-                        let is_iterator = builder.is_iterator();
-                        if is_iterator {
+                        let is_breakable = builder.supports_break();
+                        if is_breakable {
                             self.in_breakable_context = self.in_breakable_context.saturating_add(1);
                         }
                         let compiled = self.compile_block_with_type(block, state);
-                        if is_iterator {
+                        if is_breakable {
                             self.in_breakable_context = self.in_breakable_context.saturating_sub(1);
                         }
                         match compiled {
