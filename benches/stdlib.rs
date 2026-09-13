@@ -726,6 +726,16 @@ bench_function! {
         args: func_args![value: "foo"],
         want: Ok(4_413_582_353_838_009_230_i64),
     }
+
+    medium_256b {
+        args: func_args![value: "a".repeat(256)],
+        want: Ok(4_282_022_054_821_553_995_i64),
+    }
+
+    large_4kb {
+        args: func_args![value: "a".repeat(4096)],
+        want: Ok(804_084_636_444_332_486_i64),
+    }
 }
 
 bench_function! {
