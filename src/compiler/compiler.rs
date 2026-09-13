@@ -933,11 +933,7 @@ impl<'a> Compiler<'a> {
         })
     }
 
-    fn compile_break(
-        &mut self,
-        node: &Node<ast::Break>,
-        _state: &mut TypeState,
-    ) -> Option<Break> {
+    fn compile_break(&mut self, node: &Node<ast::Break>, _state: &mut TypeState) -> Option<Break> {
         let span = node.span();
         if self.in_breakable_context == 0 {
             self.diagnostics.push(Box::new(break_::Error::new(span)));
