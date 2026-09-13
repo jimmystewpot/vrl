@@ -6,13 +6,13 @@ where
 {
     match value {
         Value::Array(array) => {
-            for (index, value) in array.iter().enumerate() {
-                runner.run_index_value(ctx, index, value)?;
+            for (index, value) in array.into_iter().enumerate() {
+                runner.run_index_value_owned(ctx, index, value)?;
             }
         }
         Value::Object(object) => {
-            for (key, value) in &object {
-                runner.run_key_value(ctx, key, value)?;
+            for (key, value) in object {
+                runner.run_key_value_owned(ctx, key, value)?;
             }
         }
         _ => {}
@@ -341,5 +341,56 @@ mod tests {
         let res = for_each(array, &mut ctx, &runner);
         assert!(res.is_err());
         assert_eq!(*count.borrow(), 1);
+    }
+
+    #[test]
+    fn test_for_each_array_wildcard_index() {
+        let (mut target, mut runtime_state, tz) = test_context();
+        let mut ctx = Context::new(&mut target, &mut runtime_state, &tz);
+
+        let visited = RefCell::new(Vec::new());
+        // First parameter is wildcard `_` (represented as empty ident)
+        let variables = [ident(""), ident("v")];
+        let runner = closure::Runner::new(&variables, |ctx| {
+            assert!(ctx.state().variable(&ident("")).is_none());
+            let v = ctx.state().variable(&ident("v")).cloned().unwrap();
+            visited.borrow_mut().push(v);
+            Ok(Value::Null)
+        });
+
+        let array = Value::Array(vec![Value::from("alpha"), Value::from("beta")]);
+        let res = for_each(array, &mut ctx, &runner);
+        assert_eq!(res, Ok(Value::Null));
+        assert_eq!(
+            visited.into_inner(),
+            vec![Value::from("alpha"), Value::from("beta")]
+        );
+    }
+
+    #[test]
+    fn test_for_each_object_wildcard_key() {
+        let (mut target, mut runtime_state, tz) = test_context();
+        let mut ctx = Context::new(&mut target, &mut runtime_state, &tz);
+
+        let visited = RefCell::new(Vec::new());
+        // Key parameter is wildcard `_`
+        let variables = [ident("_"), ident("v")];
+        let runner = closure::Runner::new(&variables, |ctx| {
+            assert!(ctx.state().variable(&ident("_")).is_none());
+            let v = ctx.state().variable(&ident("v")).cloned().unwrap();
+            visited.borrow_mut().push(v);
+            Ok(Value::Null)
+        });
+
+        let mut map = ObjectMap::new();
+        map.insert("k1".into(), Value::Integer(100));
+        map.insert("k2".into(), Value::Integer(200));
+
+        let res = for_each(Value::Object(map), &mut ctx, &runner);
+        assert_eq!(res, Ok(Value::Null));
+        assert_eq!(
+            visited.into_inner(),
+            vec![Value::Integer(100), Value::Integer(200)]
+        );
     }
 }
