@@ -804,14 +804,10 @@ impl<'a> Compiler<'a> {
                     None => None,
                     Some(block) => {
                         let span = block.span();
-                        let is_breakable = builder.supports_break();
-                        if is_breakable {
-                            self.in_breakable_context = self.in_breakable_context.saturating_add(1);
-                        }
+                        let prev_breakable = self.in_breakable_context;
+                        self.in_breakable_context = usize::from(builder.supports_break());
                         let compiled = self.compile_block_with_type(block, state);
-                        if is_breakable {
-                            self.in_breakable_context = self.in_breakable_context.saturating_sub(1);
-                        }
+                        self.in_breakable_context = prev_breakable;
                         match compiled {
                             Some(block_with_type) => Some(Node::new(span, block_with_type)),
                             None => return None,
