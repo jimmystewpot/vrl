@@ -401,4 +401,60 @@ mod execution_control_tests {
         let result = program.resolve(&mut ctx);
         assert_eq!(result, Ok(Value::from(2)));
     }
+
+    #[test]
+    fn break_is_not_caught_by_error_coalescing() {
+        let source = indoc! {r#"
+            count = 0
+            for_each([1, 2, 3]) -> |_i, val| {
+                count = count + 1
+                res = { if val == 2 { break } else { parse_int("not_a_number") } } ?? 999
+            }
+            count
+        "#};
+
+        let fns = crate::stdlib::all();
+        let program = crate::compiler::compile(source, &fns).unwrap().program;
+
+        let mut target = TargetValue {
+            value: Value::Null,
+            metadata: Value::Null,
+            secrets: Secrets::new(),
+        };
+        let mut state = RuntimeState::default();
+        let tz = TimeZone::default();
+        let mut ctx = Context::new(&mut target, &mut state, &tz);
+
+        let result = program.resolve(&mut ctx);
+        assert_eq!(result, Ok(Value::from(2)));
+    }
+
+    #[test]
+    fn break_is_not_wrapped_by_boolean_or() {
+        let source = indoc! {r"
+            count = 0
+            for_each([1, 2, 3]) -> |_i, val| {
+                count = count + 1
+                if false || { if val == 2 { break } else { true } } {
+                    res = val
+                }
+            }
+            count
+        "};
+
+        let fns = crate::stdlib::all();
+        let program = crate::compiler::compile(source, &fns).unwrap().program;
+
+        let mut target = TargetValue {
+            value: Value::Null,
+            metadata: Value::Null,
+            secrets: Secrets::new(),
+        };
+        let mut state = RuntimeState::default();
+        let tz = TimeZone::default();
+        let mut ctx = Context::new(&mut target, &mut state, &tz);
+
+        let result = program.resolve(&mut ctx);
+        assert_eq!(result, Ok(Value::from(2)));
+    }
 }
