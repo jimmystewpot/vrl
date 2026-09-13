@@ -214,4 +214,12 @@ impl RuntimeState {
             }
         }
     }
+
+    pub(crate) fn set_or_insert_variable(&mut self, ident: &Ident, value: Value) {
+        if let Some(slot) = self.variables.get_mut(ident) {
+            *slot = value;
+        } else {
+            self.variables.insert(ident.clone(), value);
+        }
+    }
 }

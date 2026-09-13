@@ -6,13 +6,15 @@ where
 {
     match value {
         Value::Array(array) => {
+            let mut scoped = runner.scoped_loop(ctx);
             for (index, value) in array.into_iter().enumerate() {
-                runner.run_index_value_owned(ctx, index, value)?;
+                scoped.run_index_value(index, value)?;
             }
         }
         Value::Object(object) => {
+            let mut scoped = runner.scoped_loop(ctx);
             for (key, value) in object {
-                runner.run_key_value_owned(ctx, key, value)?;
+                scoped.run_key_value(key, value)?;
             }
         }
         _ => {}
@@ -392,5 +394,142 @@ mod tests {
             visited.into_inner(),
             vec![Value::Integer(100), Value::Integer(200)]
         );
+    }
+
+    #[test]
+    fn test_for_each_outer_variable_preserved_after_completion() {
+        let (mut target, mut runtime_state, tz) = test_context();
+        let i_ident = ident("i");
+        let v_ident = ident("v");
+        runtime_state.insert_variable(i_ident.clone(), Value::from("outer_i"));
+        runtime_state.insert_variable(v_ident.clone(), Value::from("outer_v"));
+        let mut ctx = Context::new(&mut target, &mut runtime_state, &tz);
+
+        let variables = [i_ident.clone(), v_ident.clone()];
+        let runner = closure::Runner::new(&variables, |ctx| {
+            let i = ctx.state().variable(&ident("i")).cloned().unwrap();
+            let v = ctx.state().variable(&ident("v")).cloned().unwrap();
+            assert_ne!(i, Value::from("outer_i"));
+            assert_ne!(v, Value::from("outer_v"));
+            Ok(Value::Null)
+        });
+
+        let array = Value::Array(vec![Value::from(10), Value::from(20)]);
+        let res = for_each(array, &mut ctx, &runner);
+        assert_eq!(res, Ok(Value::Null));
+
+        assert_eq!(
+            ctx.state().variable(&i_ident),
+            Some(&Value::from("outer_i"))
+        );
+        assert_eq!(
+            ctx.state().variable(&v_ident),
+            Some(&Value::from("outer_v"))
+        );
+
+        // Object iteration preservation
+        let k_ident = ident("k");
+        ctx.state_mut()
+            .insert_variable(k_ident.clone(), Value::from("outer_k"));
+        let obj_variables = [k_ident.clone(), v_ident.clone()];
+        let obj_runner = closure::Runner::new(&obj_variables, |_ctx| Ok(Value::Null));
+
+        let mut map = ObjectMap::new();
+        map.insert("entry1".into(), Value::from("val1"));
+        let res = for_each(Value::Object(map), &mut ctx, &obj_runner);
+        assert_eq!(res, Ok(Value::Null));
+
+        assert_eq!(
+            ctx.state().variable(&k_ident),
+            Some(&Value::from("outer_k"))
+        );
+        assert_eq!(
+            ctx.state().variable(&v_ident),
+            Some(&Value::from("outer_v"))
+        );
+    }
+
+    #[test]
+    fn test_for_each_outer_variable_preserved_on_error() {
+        let (mut target, mut runtime_state, tz) = test_context();
+        let i_ident = ident("i");
+        let v_ident = ident("v");
+        runtime_state.insert_variable(i_ident.clone(), Value::from(999));
+        runtime_state.insert_variable(v_ident.clone(), Value::from("persisted"));
+        let mut ctx = Context::new(&mut target, &mut runtime_state, &tz);
+
+        let count = RefCell::new(0);
+        let variables = [i_ident.clone(), v_ident.clone()];
+        let runner = closure::Runner::new(&variables, |_ctx| {
+            *count.borrow_mut() += 1;
+            Err(ExpressionError::from("abort on error"))
+        });
+
+        let array = Value::Array(vec![Value::from(1), Value::from(2)]);
+        let res = for_each(array, &mut ctx, &runner);
+        assert!(res.is_err());
+        assert_eq!(*count.borrow(), 1);
+
+        assert_eq!(ctx.state().variable(&i_ident), Some(&Value::from(999)));
+        assert_eq!(
+            ctx.state().variable(&v_ident),
+            Some(&Value::from("persisted"))
+        );
+    }
+
+    #[test]
+    fn test_for_each_outer_variable_preserved_on_early_return() {
+        let (mut target, mut runtime_state, tz) = test_context();
+        let i_ident = ident("i");
+        let v_ident = ident("v");
+        runtime_state.insert_variable(i_ident.clone(), Value::from("saved_i"));
+        runtime_state.insert_variable(v_ident.clone(), Value::from("saved_v"));
+        let mut ctx = Context::new(&mut target, &mut runtime_state, &tz);
+
+        let count = RefCell::new(0);
+        let variables = [i_ident.clone(), v_ident.clone()];
+        let runner = closure::Runner::new(&variables, |_ctx| {
+            *count.borrow_mut() += 1;
+            Err(ExpressionError::Return {
+                span: Span::new(0, 0),
+                value: Value::from("early"),
+            })
+        });
+
+        let array = Value::Array(vec![Value::from(1), Value::from(2)]);
+        let res = for_each(array, &mut ctx, &runner);
+        assert_eq!(res, Ok(Value::Null));
+        assert_eq!(*count.borrow(), 2);
+
+        assert_eq!(
+            ctx.state().variable(&i_ident),
+            Some(&Value::from("saved_i"))
+        );
+        assert_eq!(
+            ctx.state().variable(&v_ident),
+            Some(&Value::from("saved_v"))
+        );
+    }
+
+    #[test]
+    fn test_for_each_closure_new_variables_cleaned_up() {
+        let (mut target, mut runtime_state, tz) = test_context();
+        let mut ctx = Context::new(&mut target, &mut runtime_state, &tz);
+
+        let i_ident = ident("i");
+        let v_ident = ident("v");
+        assert!(ctx.state().variable(&i_ident).is_none());
+        assert!(ctx.state().variable(&v_ident).is_none());
+
+        let variables = [i_ident.clone(), v_ident.clone()];
+        let runner = closure::Runner::new(&variables, |_ctx| Ok(Value::Null));
+
+        let array = Value::Array(vec![Value::from(1), Value::from(2)]);
+        let res = for_each(array, &mut ctx, &runner);
+        assert_eq!(res, Ok(Value::Null));
+
+        // After completion, parameters should be removed from runtime state
+        assert!(ctx.state().variable(&i_ident).is_none());
+        assert!(ctx.state().variable(&v_ident).is_none());
     }
 }
