@@ -241,9 +241,8 @@ impl AstVisitor<'_> {
             Expr::Variable(variable) => {
                 state.mark_identifier_used(&variable.node);
             }
-            Expr::Abort(_) => {}
+            Expr::Abort(_) | Expr::Break(_) => {}
             Expr::Return(r#return) => self.visit_return(r#return, state),
-            Expr::Break(_) => {}
         }
     }
 

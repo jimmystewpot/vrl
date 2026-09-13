@@ -1,10 +1,9 @@
 use std::fmt;
 
 use crate::compiler::{
-    codes,
+    Context, Expression, Span, TypeDef, codes,
     expression::Resolved,
     state::{TypeInfo, TypeState},
-    Context, Expression, Span, TypeDef,
 };
 use crate::diagnostic::{DiagnosticMessage, Label, Note};
 

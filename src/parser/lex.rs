@@ -629,7 +629,8 @@ impl<'input> Token<&'input str> {
     /// Returns either a literal, reserved, or generic identifier.
     fn ident(s: &'input str) -> Self {
         use Token::{
-            Abort, Break, Else, False, Identifier, If, Null, PathField, ReservedIdentifier, Return, True,
+            Abort, Break, Else, False, Identifier, If, Null, PathField, ReservedIdentifier, Return,
+            True,
         };
 
         match s {
@@ -643,12 +644,10 @@ impl<'input> Token<&'input str> {
             "break" => Break,
 
             // reserved identifiers
-            "array" | "bool" | "boolean" | "continue" | "do" | "emit" | "float"
-            | "for" | "forall" | "foreach" | "all" | "each" | "any" | "try" | "undefined"
-            | "int" | "integer" | "iter" | "object" | "regex" | "string" | "traverse"
-            | "timestamp" | "duration" | "unless" | "walk" | "while" | "loop" => {
-                ReservedIdentifier(s)
-            }
+            "array" | "bool" | "boolean" | "continue" | "do" | "emit" | "float" | "for"
+            | "forall" | "foreach" | "all" | "each" | "any" | "try" | "undefined" | "int"
+            | "integer" | "iter" | "object" | "regex" | "string" | "traverse" | "timestamp"
+            | "duration" | "unless" | "walk" | "while" | "loop" => ReservedIdentifier(s),
 
             _ if s.contains('@') => PathField(s),
 

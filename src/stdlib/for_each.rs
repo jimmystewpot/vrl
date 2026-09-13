@@ -6,12 +6,16 @@ where
 {
     for item in value.into_iter(false) {
         match item {
-            IterItem::KeyValue(key, value) => {
-                runner.run_key_value(ctx, key, value)?;
-            }
-            IterItem::IndexValue(index, value) => {
-                runner.run_index_value(ctx, index, value)?;
-            }
+            IterItem::KeyValue(key, value) => match runner.run_key_value(ctx, key, value) {
+                Ok(_) => {}
+                Err(ExpressionError::Break { .. }) => break,
+                Err(err) => return Err(err),
+            },
+            IterItem::IndexValue(index, value) => match runner.run_index_value(ctx, index, value) {
+                Ok(_) => {}
+                Err(ExpressionError::Break { .. }) => break,
+                Err(err) => return Err(err),
+            },
             IterItem::Value(_) => {}
         }
     }
@@ -99,6 +103,20 @@ impl Function for ForEach {
                     count
                 "},
                 result: Ok("9"),
+            },
+            example! {
+                title: "Early termination with break",
+                source: indoc! {r"
+                    found = null
+                    for_each([1, 2, 3, 4, 5]) -> |_index, value| {
+                        if value == 3 {
+                            found = value
+                            break
+                        }
+                    }
+                    found
+                "},
+                result: Ok("3"),
             },
         ]
     }

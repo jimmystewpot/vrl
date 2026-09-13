@@ -308,7 +308,11 @@ mod tests {
 
         let res = runner.run_index_value(&mut ctx, 0, &Value::from(10));
         assert!(matches!(res, Err(ExpressionError::Break { .. })));
-        assert!(ctx.state().variable(&Ident::from("idx".to_string())).is_none());
+        assert!(
+            ctx.state()
+                .variable(&Ident::from("idx".to_string()))
+                .is_none()
+        );
         assert_eq!(ctx.state().variable(&val_ident), Some(&Value::from(42)));
     }
 
@@ -330,8 +334,11 @@ mod tests {
 
         let res = runner.run_key_value(&mut ctx, "k", &Value::from(10));
         assert!(matches!(res, Err(ExpressionError::Break { .. })));
-        assert!(ctx.state().variable(&Ident::from("key".to_string())).is_none());
+        assert!(
+            ctx.state()
+                .variable(&Ident::from("key".to_string()))
+                .is_none()
+        );
         assert_eq!(ctx.state().variable(&val_ident), Some(&Value::from(42)));
     }
 }
-

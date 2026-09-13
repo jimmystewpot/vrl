@@ -214,7 +214,7 @@ impl<'a> Compiler<'a> {
             Unary(node) => self.compile_unary(node, state).map(Into::into),
             Abort(node) => self.compile_abort(node, state).map(Into::into),
             Return(node) => self.compile_return(node, state).map(Into::into),
-            Break(node) => self.compile_break(node, state).map(Into::into),
+            Break(node) => self.compile_break(&node, state).map(Into::into),
         }?;
 
         // If the compiled expression is fallible and no sub-expression has
@@ -933,7 +933,11 @@ impl<'a> Compiler<'a> {
         })
     }
 
-    fn compile_break(&mut self, node: Node<ast::Break>, _state: &mut TypeState) -> Option<Break> {
+    fn compile_break(
+        &mut self,
+        node: &Node<ast::Break>,
+        _state: &mut TypeState,
+    ) -> Option<Break> {
         let span = node.span();
         if self.in_breakable_context == 0 {
             self.diagnostics.push(Box::new(break_::Error::new(span)));

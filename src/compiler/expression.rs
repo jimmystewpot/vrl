@@ -6,6 +6,7 @@ pub use abort::Abort;
 pub use array::Array;
 pub use assignment::Assignment;
 pub use block::Block;
+pub use break_::Break;
 pub use container::{Container, Variant};
 #[allow(clippy::module_name_repetitions)]
 pub use function::FunctionExpression;
@@ -17,7 +18,6 @@ pub use literal::Literal;
 pub use noop::Noop;
 pub use not::Not;
 pub use object::Object;
-pub use break_::Break;
 pub use op::Op;
 pub use predicate::Predicate;
 pub use query::{Query, Target};
