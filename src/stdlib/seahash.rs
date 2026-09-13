@@ -46,11 +46,20 @@ impl Function for Seahash {
 
     fn compile(
         &self,
-        _state: &state::TypeState,
+        state: &state::TypeState,
         _ctx: &mut FunctionCompileContext,
         arguments: ArgumentList,
     ) -> Compiled {
         let value = arguments.required("value");
+
+        if let Some(bytes) = value
+            .resolve_constant(state)
+            .and_then(|val| val.try_bytes().ok())
+        {
+            #[allow(clippy::cast_possible_wrap)]
+            let result = seahash::hash(&bytes) as i64;
+            return Ok(Box::new(crate::compiler::expression::Literal::Integer(result)));
+        }
 
         Ok(SeahashFn { value }.as_expr())
     }
@@ -99,5 +108,40 @@ mod tests {
              want: Ok(-2_796_170_501_982_571_315_i64),
              tdef: TypeDef::integer().infallible(),
         }
+
+        seahash_constant_literal {
+             args: func_args![value: "hello world"],
+             want: Ok(1_705_785_031_139_253_279_i64),
+             tdef: TypeDef::integer().infallible(),
+        }
     ];
+
+    #[test]
+    fn test_seahash_compiles_to_literal() {
+        use crate::compiler::CompileConfig;
+
+        let state = state::TypeState::default();
+        let mut ctx = FunctionCompileContext::new(Span::new(0, 0), CompileConfig::default());
+        let mut args = ArgumentList::default();
+        args.insert("value", Value::from("foo").into());
+
+        let expr = Seahash.compile(&state, &mut ctx, args).unwrap();
+        assert_eq!(
+            expr.resolve_constant(&state),
+            Some(Value::Integer(4_413_582_353_838_009_230_i64))
+        );
+    }
+
+    #[test]
+    fn test_seahash_dynamic_compiles_to_seahash_fn() {
+        use crate::compiler::CompileConfig;
+
+        let state = state::TypeState::default();
+        let mut ctx = FunctionCompileContext::new(Span::new(0, 0), CompileConfig::default());
+        let mut args = ArgumentList::default();
+        args.insert("value", crate::query!(".foo"));
+
+        let expr = Seahash.compile(&state, &mut ctx, args).unwrap();
+        assert!(expr.resolve_constant(&state).is_none());
+    }
 }
