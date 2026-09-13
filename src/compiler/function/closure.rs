@@ -283,3 +283,55 @@ fn cleanup(state: &mut RuntimeState, ident: Option<&Ident>, data: Option<Value>)
         _ => {}
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compiler::{Span, TimeZone};
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn run_index_value_propagates_break_and_cleans_up() {
+        let mut target = Value::from(BTreeMap::default());
+        let mut state = RuntimeState::default();
+        let val_ident = Ident::from("val".to_string());
+        state.insert_variable(val_ident.clone(), Value::from(42));
+        let tz = TimeZone::Named(chrono_tz::Tz::UTC);
+        let mut ctx = Context::new(&mut target, &mut state, &tz);
+
+        let variables = vec![Ident::from("idx".to_string()), val_ident.clone()];
+        let runner = Runner::new(&variables, |_ctx| {
+            Err(ExpressionError::Break {
+                span: Span::new(0, 5),
+            })
+        });
+
+        let res = runner.run_index_value(&mut ctx, 0, &Value::from(10));
+        assert!(matches!(res, Err(ExpressionError::Break { .. })));
+        assert!(ctx.state().variable(&Ident::from("idx".to_string())).is_none());
+        assert_eq!(ctx.state().variable(&val_ident), Some(&Value::from(42)));
+    }
+
+    #[test]
+    fn run_key_value_propagates_break_and_cleans_up() {
+        let mut target = Value::from(BTreeMap::default());
+        let mut state = RuntimeState::default();
+        let val_ident = Ident::from("val".to_string());
+        state.insert_variable(val_ident.clone(), Value::from(42));
+        let tz = TimeZone::Named(chrono_tz::Tz::UTC);
+        let mut ctx = Context::new(&mut target, &mut state, &tz);
+
+        let variables = vec![Ident::from("key".to_string()), val_ident.clone()];
+        let runner = Runner::new(&variables, |_ctx| {
+            Err(ExpressionError::Break {
+                span: Span::new(0, 5),
+            })
+        });
+
+        let res = runner.run_key_value(&mut ctx, "k", &Value::from(10));
+        assert!(matches!(res, Err(ExpressionError::Break { .. })));
+        assert!(ctx.state().variable(&Ident::from("key".to_string())).is_none());
+        assert_eq!(ctx.state().variable(&val_ident), Some(&Value::from(42)));
+    }
+}
+
