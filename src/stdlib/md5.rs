@@ -3,7 +3,10 @@ use md5::Digest;
 
 fn md5(value: Value) -> Resolved {
     let value = value.try_bytes()?;
-    Ok(hex::encode(md5::Md5::digest(&value)).into())
+    let digest = md5::Md5::digest(&value);
+    let mut buf = [0u8; 32];
+    hex::encode_to_slice(digest, &mut buf).expect("32 bytes");
+    Ok(Value::Bytes(Bytes::copy_from_slice(&buf)))
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -82,6 +85,18 @@ mod tests {
         md5 {
             args: func_args![value: "foo"],
             want: Ok(value!("acbd18db4cc2f85cedef654fccc4a4d8")),
+            tdef: TypeDef::bytes().infallible(),
+        }
+
+        md5_empty {
+            args: func_args![value: ""],
+            want: Ok(value!("d41d8cd98f00b204e9800998ecf8427e")),
+            tdef: TypeDef::bytes().infallible(),
+        }
+
+        md5_sentence {
+            args: func_args![value: "The quick brown fox jumps over the lazy dog"],
+            want: Ok(value!("9e107d9d372bb6826bd81d3542a419d6")),
             tdef: TypeDef::bytes().infallible(),
         }
     ];
