@@ -429,6 +429,7 @@ pub enum Token<S> {
     True,
     Abort,
     Return,
+    Break,
 
     // tokens
     Colon,
@@ -490,7 +491,7 @@ pub enum Token<S> {
 impl<S> Token<S> {
     pub(crate) fn map<R>(self, f: impl Fn(S) -> R) -> Token<R> {
         use self::Token::{
-            Abort, Ampersand, Arrow, Bang, Colon, Comma, Dot, Else, Equals, Escape, False,
+            Abort, Ampersand, Arrow, Bang, Break, Colon, Comma, Dot, Else, Equals, Escape, False,
             FloatLiteral, FunctionCall, Identifier, If, IntegerLiteral, InvalidToken, LBrace,
             LBracket, LParen, LQuery, MergeEquals, Newline, Null, Operator, PathField, Percent,
             Question, RBrace, RBracket, RParen, RQuery, RawStringLiteral, RegexLiteral,
@@ -525,6 +526,7 @@ impl<S> Token<S> {
             True => True,
             Abort => Abort,
             Return => Return,
+            Break => Break,
 
             // tokens
             Colon => Colon,
@@ -561,7 +563,7 @@ where
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Token::{
-            Abort, Ampersand, Arrow, Bang, Colon, Comma, Dot, Else, Equals, Escape, False,
+            Abort, Ampersand, Arrow, Bang, Break, Colon, Comma, Dot, Else, Equals, Escape, False,
             FloatLiteral, FunctionCall, Identifier, If, IntegerLiteral, InvalidToken, LBrace,
             LBracket, LParen, LQuery, MergeEquals, Newline, Null, Operator, PathField, Percent,
             Question, RBrace, RBracket, RParen, RQuery, RawStringLiteral, RegexLiteral,
@@ -590,6 +592,7 @@ where
             True => "True",
             Abort => "Abort",
             Return => "Return",
+            Break => "Break",
 
             // tokens
             Colon => "Colon",
@@ -626,7 +629,7 @@ impl<'input> Token<&'input str> {
     /// Returns either a literal, reserved, or generic identifier.
     fn ident(s: &'input str) -> Self {
         use Token::{
-            Abort, Else, False, Identifier, If, Null, PathField, ReservedIdentifier, Return, True,
+            Abort, Break, Else, False, Identifier, If, Null, PathField, ReservedIdentifier, Return, True,
         };
 
         match s {
@@ -637,9 +640,10 @@ impl<'input> Token<&'input str> {
             "null" => Null,
             "abort" => Abort,
             "return" => Return,
+            "break" => Break,
 
             // reserved identifiers
-            "array" | "bool" | "boolean" | "break" | "continue" | "do" | "emit" | "float"
+            "array" | "bool" | "boolean" | "continue" | "do" | "emit" | "float"
             | "for" | "forall" | "foreach" | "all" | "each" | "any" | "try" | "undefined"
             | "int" | "integer" | "iter" | "object" | "regex" | "string" | "traverse"
             | "timestamp" | "duration" | "unless" | "walk" | "while" | "loop" => {

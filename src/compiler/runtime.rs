@@ -189,7 +189,9 @@ impl Runtime {
                 | ExpressionError::Fallible { .. }
                 | ExpressionError::Missing { .. }),
             ) => Err(Terminate::Abort(err)),
-            Err(err @ ExpressionError::Error { .. }) => Err(Terminate::Error(err)),
+            Err(err @ (ExpressionError::Error { .. } | ExpressionError::Break { .. })) => {
+                Err(Terminate::Error(err))
+            }
         }
     }
 }

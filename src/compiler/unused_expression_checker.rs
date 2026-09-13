@@ -243,6 +243,7 @@ impl AstVisitor<'_> {
             }
             Expr::Abort(_) => {}
             Expr::Return(r#return) => self.visit_return(r#return, state),
+            Expr::Break(_) => {}
         }
     }
 
