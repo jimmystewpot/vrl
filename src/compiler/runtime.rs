@@ -201,11 +201,13 @@ mod execution_control_tests {
     use std::collections::BTreeMap;
     use std::ops::ControlFlow;
 
-    use super::{ExecutionControl, Runtime, Terminate, TimeZone};
-    use crate::compiler::Program;
+    use indoc::indoc;
+
+    use super::{Context, ExecutionControl, Runtime, Terminate, TimeZone};
     use crate::compiler::state::RuntimeState;
+    use crate::compiler::{Program, TargetValue};
     use crate::parser::ast::Ident;
-    use crate::value::Value;
+    use crate::value::{Secrets, Value};
 
     struct BreakAt {
         checkpoint: usize,
@@ -367,5 +369,36 @@ mod execution_control_tests {
             runtime.state.variable(&Ident::new("item")),
             Some(&Value::from("outer")),
         );
+    }
+
+    #[test]
+    fn break_is_not_caught_by_infallible_assignment() {
+        let source = indoc! {r#"
+            count = 0
+            for_each([1, 2, 3]) -> |_i, val| {
+                count = count + 1
+                _, err = if val == 2 {
+                    break
+                } else {
+                    parse_int("not_a_number")
+                }
+            }
+            count
+        "#};
+
+        let fns = crate::stdlib::all();
+        let program = crate::compiler::compile(source, &fns).unwrap().program;
+
+        let mut target = TargetValue {
+            value: Value::Null,
+            metadata: Value::Null,
+            secrets: Secrets::new(),
+        };
+        let mut state = RuntimeState::default();
+        let tz = TimeZone::default();
+        let mut ctx = Context::new(&mut target, &mut state, &tz);
+
+        let result = program.resolve(&mut ctx);
+        assert_eq!(result, Ok(Value::from(2)));
     }
 }
